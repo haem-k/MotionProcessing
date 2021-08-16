@@ -7,22 +7,24 @@ static std::vector<agl::Pose> stitch(
 {
     std::vector<agl::Pose> new_poses = poses_a;
 
-    Quat last_root_orient = poses_a.back().local_rotations.at(0);
+    Quat a_last_root_orient = poses_a.back().local_rotations.at(0);
     // std::cout << last_root_orient << std::endl;
-    Vec3 last_root_pos = poses_a.back().root_position;
-    last_root_pos.y() = 0.0f;
+    Vec3 a_last_root_pos = poses_a.back().root_position;
+    a_last_root_pos.y() = 0.0f;
 
     Quat inverse = poses_b.at(0).local_rotations.at(0).inverse();
-
+    Vec3 b_first_root = poses_b.at(0).root_position;
     for(int i = 0; i < poses_b.size(); i++)
     {
         // Compute local transform
         agl::Pose new_pose = poses_b.at(i);
+        // new_pose.root_position = a_last_root_orient * inverse * new_pose.root_position;
+        // new_pose.root_position += a_last_root_pos;
+        // new_pose.local_rotations.at(0) = a_last_root_orient * inverse * new_pose.local_rotations.at(0);
         
-        new_pose.root_position = last_root_orient * inverse * new_pose.root_position;
-        new_pose.root_position += last_root_pos;
-        new_pose.local_rotations.at(0) = last_root_orient * inverse * new_pose.local_rotations.at(0);
-
+        // new_pose.root_position = inverse * new_pose.root_position;
+        new_pose.root_position = new_pose.root_position;
+        new_pose.root_position += a_last_root_pos;
 
         new_poses.push_back(new_pose);
     }
@@ -49,6 +51,9 @@ public:
         const char* motion_path_a   = "../data/fbx/ybot/motion/Walking.fbx";
         const char* motion_path_b   = "../data/fbx/ybot/motion/Sneak Walk.fbx";
 
+        // const char* motion_path_a   = "../data/fbx/ybot/motion/Running To Turn.fbx";
+        // const char* motion_path_b   = "../data/fbx/ybot/motion/Running.fbx";
+
         agl::FBX model_fbx(model_path);
         agl::FBX motion_a_fbx(motion_path_a);
         agl::FBX motion_b_fbx(motion_path_b);
@@ -61,19 +66,6 @@ public:
 
         cam_offset = 2.0f * Vec3(0.0f, 3.0f, 3.0f);
     
-
-        // Print motion name -------------------------------------------- //
-        {
-            std::cout << motion_path_a << " imported" << std::endl;
-            std::cout << "\tname : " << motion_a.name << std::endl;
-            std::cout << "\tnumber of frames : " << motion_a.poses.size() << std::endl;
-            std::cout << std::endl;
-
-            std::cout << motion_path_b << " imported" << std::endl;
-            std::cout << "\tname : " << motion_b.name << std::endl;
-            std::cout << "\tnumber of frames : " << motion_b.poses.size() << std::endl;
-        }
-
         stitched = stitch(motion_a.poses, motion_b.poses);
         stitched_nof = stitched.size();
 
