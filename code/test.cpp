@@ -37,6 +37,15 @@ public:
         target_pos.y() = 0.0f;
         proj_target_line_trf = draw_line(start_pos, target_pos);
 
+        // Get transformation between projected vectors
+        rotate_line_trf = proj_line_trf.inverse();
+        rotate_line_trf = proj_target_line_trf * rotate_line_trf;
+        // 'displacement' transform -> not going to translate, only rotation
+        rotate_line_trf.col(3).head<3>() = Vec3(0, 0, 0);
+
+        // rotate original vector with rotation computed w/ projected vectors
+        result_line_trf = rotate_line_trf * line_trf;
+
     }
 
     int frame = 0;
@@ -78,11 +87,11 @@ public:
             ->color(0, 0, 1)
             ->draw();
 
-        // agl::Render::cube()
-        //     ->scale(0.1f, 0.1f, line_length)
-        //     ->transform(result_line_trf)
-        //     ->color(0, 1, 0.2)
-        //     ->draw();
+        agl::Render::cube()
+            ->scale(0.1f, 0.1f, line_length)
+            ->transform(result_line_trf)
+            ->color(0, 1, 0.2)
+            ->draw();
 
         agl::Render::sphere()
             ->position(start_pos)
