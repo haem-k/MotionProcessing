@@ -1,6 +1,76 @@
 #include <aOpenGL.h>
 #include <iostream>
 
+static std::vector<agl::Pose> stitch_proj(
+    const std::vector<agl::Pose>& poses_a,
+    const std::vector<agl::Pose>& poses_b)
+{
+    std::vector<agl::Pose> new_poses = poses_a;
+
+    agl::Pose aLast = poses_a.back();
+    agl::Pose bFirst = poses_b.at(0);
+
+
+    // Project root- aLast
+    Vec3 a_last_pos = aLast.root_position;
+    a_last_pos.y() = 0;     // position
+    Mat4 a_last_proj = Mat4().Identity();
+    a_last_proj.col(3).head<3>() = a_last_pos;
+    
+    Vec3 y = Vec3(0, 1, 0);     // rotation
+    Vec3 z = aLast.local_rotations.at(0) * Vec3(0, 0, 1);
+    z.y() = 0.0f;
+    z.normalize();
+    Vec3 x = y.cross(z);
+    a_last_proj.col(0).head<3>() = x;
+    a_last_proj.col(1).head<3>() = y;
+    a_last_proj.col(2).head<3>() = z;
+
+
+    // Project root- bFirst
+    Vec3 b_0_pos = bFirst.root_position;
+    b_0_pos.y() = 0;    // position
+    Mat4 b_first_proj = Mat4().Identity();
+    b_first_proj.col(3).head<3>() = b_0_pos;
+
+    z = bFirst.local_rotations.at(0) * Vec3(0, 0, 1);   // rotation
+    z.y() = 0.0f;
+    z.normalize();
+    x = y.cross(z);
+    b_first_proj.col(0).head<3>() = x;
+    b_first_proj.col(1).head<3>() = y;
+    b_first_proj.col(2).head<3>() = z;
+
+
+    // Rotation between the projected roots
+    Mat4 align_transform = a_last_proj * b_first_proj.inverse();
+    Mat3 align_rotation;
+    align_rotation.col(0) = align_transform.col(0).head<3>();     // only consider rotation
+    align_rotation.col(1) = align_transform.col(1).head<3>();
+    align_rotation.col(2) = align_transform.col(2).head<3>();
+
+    // rotate the pose
+    for(int i = 0; i < poses_b.size(); i++)
+    {
+        agl::Pose new_pose = poses_b.at(i);
+
+        Vec3 b_i_pos = poses_b.at(i).root_position;
+        Vec3 dp = b_i_pos - b_0_pos;
+        
+        Vec3 new_root_pos = align_rotation * dp + a_last_pos;
+        Mat3 new_root_orient = align_rotation * poses_b.at(i).local_rotations.at(0).matrix();
+
+        // compute rotation
+        new_pose.root_position = new_root_pos;
+        new_pose.local_rotations.at(i) = Quat(new_root_orient);
+        
+        new_poses.push_back(new_pose);
+    }
+
+    return new_poses;
+}
+
+
 static std::vector<agl::Pose> stitch(
     const std::vector<agl::Pose>& poses_a,
     const std::vector<agl::Pose>& poses_b)
@@ -21,11 +91,30 @@ static std::vector<agl::Pose> stitch(
         Vec3 b_i_pos = poses_b.at(i).root_position;
         Vec3 dp = (b_i_pos - b_first_pos);
         
-        Vec3 new_pos = (b_first_inverse * dp) + a_last_pos;
-        // Set original y values 
+        // Vec3 new_pos = (b_first_inverse * dp) + a_last_pos;
+        // // Set original y values 
+        // new_pos.y() = b_i_pos.y(); 
+        // new_pose.root_position = new_pos;
+        // new_pose.local_rotations.at(0) = b_first_inverse * new_pose.local_rotations.at(0);
+
+
+        // Only z part
+        Mat3 b_first_orient = poses_b.at(0).local_rotations.at(0).inverse().matrix();
+        Mat3 new_inverse = Mat3().Identity();
+        new_inverse.col(2) = poses_b.at(0).local_rotations.at(0).matrix().col(2);
+        Quat new_inverse_quat = Quat(new_inverse);
+
+        Mat3 a_last_orient_mat = a_last_orient.matrix();
+        Mat3 new_a_orient = Mat3().Identity();
+        new_a_orient.col(2) = a_last_orient_mat.col(2);
+
+        Vec3 new_pos = new_a_orient * (new_inverse_quat * dp) + a_last_pos;
         new_pos.y() = b_i_pos.y(); 
         new_pose.root_position = new_pos;
-        new_pose.local_rotations.at(0) = b_first_inverse * new_pose.local_rotations.at(0);
+        new_pose.local_rotations.at(0) = new_a_orient * new_inverse_quat * new_pose.local_rotations.at(0);
+
+
+
         new_poses.push_back(new_pose);
     }
     return new_poses;
@@ -40,6 +129,7 @@ public:
     std::vector<agl::Pose>  motion_a_poses;
     std::vector<agl::Pose>  motion_b_poses;
     std::vector<agl::Pose>  stitched;
+    std::vector<agl::Pose>  proj_stitched;
     Vec3 cam_offset;
     int a_nof;
     int b_nof;
@@ -66,8 +156,12 @@ public:
 
         cam_offset = 2.0f * Vec3(0.0f, 3.0f, 3.0f);
     
-        stitched = stitch(motion_a.poses, motion_b.poses);
-        stitched_nof = stitched.size();
+        // stitched = stitch(motion_a.poses, motion_b.poses);
+        // stitched_nof = stitched.size();
+
+        proj_stitched = stitch_proj(motion_a.poses, motion_b.poses);
+        stitched_nof = proj_stitched.size();
+        
 
     }
 
@@ -96,7 +190,7 @@ public:
         
 
         // Play stitched motion
-        model->set_pose(stitched.at(frame));
+        model->set_pose(proj_stitched.at(frame));
         frame = (frame + 1) % stitched_nof;
 
 
