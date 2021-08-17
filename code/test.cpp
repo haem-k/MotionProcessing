@@ -10,11 +10,12 @@ public:
     Vec3 target_pos = Vec3(-1, 2, -1);
 
     Mat4 line_trf;
+    Mat4 proj_line_trf;
     Mat4 target_line_trf;
-
-
+    Mat4 proj_target_line_trf;
 
     Mat4 rotate_line_trf = Mat4().Identity();
+    Mat4 result_line_trf;
     float line_length;
 
     void start() override
@@ -22,10 +23,20 @@ public:
         line_trf = draw_line(start_pos, end_pos);
         std::cout << "Initial line_trf" << std::endl;
         std::cout << line_trf << std::endl;
+        std::cout << std::endl;
 
         target_line_trf = draw_line(start_pos, target_pos);
         std::cout << "Target line_trf" << std::endl;
         std::cout << target_line_trf << std::endl;
+        std::cout << std::endl;
+
+        // Project vectors onto xz plane
+        end_pos.y() = 0.0f;
+        proj_line_trf = draw_line(start_pos, end_pos);
+
+        target_pos.y() = 0.0f;
+        proj_target_line_trf = draw_line(start_pos, target_pos);
+
     }
 
     int frame = 0;
@@ -51,9 +62,27 @@ public:
 
         agl::Render::cube()
             ->scale(0.1f, 0.1f, line_length)
+            ->transform(proj_line_trf)
+            ->color(0, 1, 0)
+            ->draw();
+
+        agl::Render::cube()
+            ->scale(0.1f, 0.1f, line_length)
             ->transform(target_line_trf)
             ->color(0, 0, 1)
             ->draw();
+
+        agl::Render::cube()
+            ->scale(0.1f, 0.1f, line_length)
+            ->transform(proj_target_line_trf)
+            ->color(0, 0, 1)
+            ->draw();
+
+        // agl::Render::cube()
+        //     ->scale(0.1f, 0.1f, line_length)
+        //     ->transform(result_line_trf)
+        //     ->color(0, 1, 0.2)
+        //     ->draw();
 
         agl::Render::sphere()
             ->position(start_pos)
