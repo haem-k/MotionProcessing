@@ -7,25 +7,25 @@ static std::vector<agl::Pose> stitch(
 {
     std::vector<agl::Pose> new_poses = poses_a;
 
-    Quat a_last_root_orient = poses_a.back().local_rotations.at(0);
-    // std::cout << last_root_orient << std::endl;
-    Vec3 a_last_root_pos = poses_a.back().root_position;
-    a_last_root_pos.y() = 0.0f;
+    Quat a_last_orient = poses_a.back().local_rotations.at(0);
+    Vec3 a_last_pos = poses_a.back().root_position;
+    a_last_pos.y() = 0.0f;
 
-    Quat inverse = poses_b.at(0).local_rotations.at(0).inverse();
-    Vec3 b_first_root = poses_b.at(0).root_position;
+    Quat b_first_inverse = poses_b.at(0).local_rotations.at(0).inverse();
+    Vec3 b_first_pos = poses_b.at(0).root_position;
+
     for(int i = 0; i < poses_b.size(); i++)
     {
-        // Compute local transform
         agl::Pose new_pose = poses_b.at(i);
-        // new_pose.root_position = a_last_root_orient * inverse * new_pose.root_position;
-        // new_pose.root_position += a_last_root_pos;
-        // new_pose.local_rotations.at(0) = a_last_root_orient * inverse * new_pose.local_rotations.at(0);
-        
-        // new_pose.root_position = inverse * new_pose.root_position;
-        new_pose.root_position = new_pose.root_position;
-        new_pose.root_position += a_last_root_pos;
 
+        Vec3 b_i_pos = poses_b.at(i).root_position;
+        Vec3 dp = (b_i_pos - b_first_pos);
+        
+        Vec3 new_pos = (b_first_inverse * dp) + a_last_pos;
+        // Set original y values 
+        new_pos.y() = b_i_pos.y(); 
+        new_pose.root_position = new_pos;
+        new_pose.local_rotations.at(0) = b_first_inverse * new_pose.local_rotations.at(0);
         new_poses.push_back(new_pose);
     }
     return new_poses;
@@ -71,24 +71,33 @@ public:
 
     }
 
+    bool stop = false;
     int frame = 0;
     void update() override
     {
+        if(stop)
+            return;
 
-        
+
+        // // Play single motion A
+        // model->set_pose(motion_a.poses.at(frame));
+        // frame = (frame + 1) % (a_nof);
+
+        // // Play single motion B
+        // model->set_pose(motion_b.poses.at(frame));
+        // frame = (frame + 1) % (b_nof);
+
+        // // Play two motions
         // if(frame >= 0 && frame < a_nof)
         //     model->set_pose(motion_a.poses.at(frame));
         // else if(frame >= a_nof && frame < a_nof + b_nof)
         //     model->set_pose(motion_b.poses.at(frame-a_nof));
-        
         // frame = (frame + 1) % (a_nof + b_nof);
         
-        
 
+        // Play stitched motion
         model->set_pose(stitched.at(frame));
         frame = (frame + 1) % stitched_nof;
-        
-        // cam_follow_root(model->root()->world_pos(), cam_offset);
 
 
     }
@@ -101,6 +110,12 @@ public:
             ->color(0.2f, 0.2f, 0.2f)
             ->draw();
 
+        agl::Render::sphere()
+            ->scale(0.3f)
+            ->color(1.0f, 0, 0)
+            ->position(0, 0, 0)
+            ->draw();
+
         agl::Render::model(model)->draw();
     }
 
@@ -108,7 +123,8 @@ public:
     {
         if(action != GLFW_PRESS)
             return;
-        
+        if(key == 's')
+            stop = !stop;
         if(key == '1')
             this->capture(true);
         if(key == '2')
