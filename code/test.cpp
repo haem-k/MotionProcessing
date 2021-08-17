@@ -7,14 +7,25 @@ class Test : public agl::App
 public:
     Vec3 start_pos = Vec3(0, 0, 0);
     Vec3 end_pos = Vec3(1, 1, 1);
+    Vec3 target_pos = Vec3(-1, 2, -1);
+
     Mat4 line_trf;
-    float z_scale;
+    Mat4 target_line_trf;
+
+
+
+    Mat4 rotate_line_trf = Mat4().Identity();
+    float line_length;
 
     void start() override
     {
         line_trf = draw_line(start_pos, end_pos);
+        std::cout << "Initial line_trf" << std::endl;
+        std::cout << line_trf << std::endl;
 
-        
+        target_line_trf = draw_line(start_pos, target_pos);
+        std::cout << "Target line_trf" << std::endl;
+        std::cout << target_line_trf << std::endl;
     }
 
     int frame = 0;
@@ -33,17 +44,24 @@ public:
 
 
         agl::Render::cube()
-            ->scale(0.1f, 0.1f, z_scale)
+            ->scale(0.1f, 0.1f, line_length)
             ->transform(line_trf)
             ->color(0, 1, 0)
             ->draw();
 
+        agl::Render::cube()
+            ->scale(0.1f, 0.1f, line_length)
+            ->transform(target_line_trf)
+            ->color(0, 0, 1)
+            ->draw();
 
         agl::Render::sphere()
-            ->position(end_pos)
+            ->position(start_pos)
             ->color(1, 0, 0)
             ->scale(0.1f)
             ->draw();
+
+
 
     }
 
@@ -63,8 +81,7 @@ public:
     {
         Mat4 line_trf = Mat4().Identity();
         
-        z_scale = sqrt(pow(start_pos.x() - end_pos.x(), 2) + pow(start_pos.y() - end_pos.y(), 2) + pow(start_pos.z() - end_pos.z(), 2));
-        std::cout << z_scale << std::endl;
+        line_length = sqrt(pow(start_pos.x() - end_pos.x(), 2) + pow(start_pos.y() - end_pos.y(), 2) + pow(start_pos.z() - end_pos.z(), 2));
         line_trf.col(3).head<3>() = (start_pos + end_pos)/2;
 
         Vec3 line_z = end_pos - start_pos;
