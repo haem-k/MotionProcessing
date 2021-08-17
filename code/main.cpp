@@ -11,9 +11,9 @@ static std::vector<agl::Pose> stitch_proj(
     agl::Pose bFirst = poses_b.at(0);
 
 
-    // Project root- aLast
+    // Project root - aLast
     Vec3 a_last_pos = aLast.root_position;
-    a_last_pos.y() = 0;     // position
+    a_last_pos.y() = 0;     // position projection -> 이거 사실 필요없네.. rotation만 있으면 되네
     Mat4 a_last_proj = Mat4().Identity();
     a_last_proj.col(3).head<3>() = a_last_pos;
     
@@ -27,9 +27,9 @@ static std::vector<agl::Pose> stitch_proj(
     a_last_proj.col(2).head<3>() = z;
 
 
-    // Project root- bFirst
+    // Project root - bFirst
     Vec3 b_0_pos = bFirst.root_position;
-    b_0_pos.y() = 0;    // position
+    b_0_pos.y() = 0;    // position -> 이거 사실 필요없네.. rotation만 있으면 되네
     Mat4 b_first_proj = Mat4().Identity();
     b_first_proj.col(3).head<3>() = b_0_pos;
 
@@ -62,7 +62,7 @@ static std::vector<agl::Pose> stitch_proj(
 
         // compute rotation
         new_pose.root_position = new_root_pos;
-        new_pose.local_rotations.at(i) = Quat(new_root_orient);
+        new_pose.local_rotations.at(0) = Quat(new_root_orient);
         
         new_poses.push_back(new_pose);
     }
