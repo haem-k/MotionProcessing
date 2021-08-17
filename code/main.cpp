@@ -10,44 +10,35 @@ static std::vector<agl::Pose> stitch_proj(
     agl::Pose aLast = poses_a.back();
     agl::Pose bFirst = poses_b.at(0);
 
+    Vec3 a_last_pos = aLast.root_position;
+    a_last_pos.y() = 0;
+    Vec3 b_0_pos = bFirst.root_position;
+    b_0_pos.y() = 0;
 
     // Project root - aLast
-    Vec3 a_last_pos = aLast.root_position;
-    a_last_pos.y() = 0;     // position projection -> 이거 사실 필요없네.. rotation만 있으면 되네
-    Mat4 a_last_proj = Mat4().Identity();
-    a_last_proj.col(3).head<3>() = a_last_pos;
-    
-    Vec3 y = Vec3(0, 1, 0);     // rotation
+    Mat3 a_last_proj = Mat3().Identity();
+    Vec3 y = Vec3(0, 1, 0);
     Vec3 z = aLast.local_rotations.at(0) * Vec3(0, 0, 1);
     z.y() = 0.0f;
     z.normalize();
     Vec3 x = y.cross(z);
-    a_last_proj.col(0).head<3>() = x;
-    a_last_proj.col(1).head<3>() = y;
-    a_last_proj.col(2).head<3>() = z;
-
+    a_last_proj.col(0) = x;
+    a_last_proj.col(1) = y;
+    a_last_proj.col(2) = z;
 
     // Project root - bFirst
-    Vec3 b_0_pos = bFirst.root_position;
-    b_0_pos.y() = 0;    // position -> 이거 사실 필요없네.. rotation만 있으면 되네
-    Mat4 b_first_proj = Mat4().Identity();
-    b_first_proj.col(3).head<3>() = b_0_pos;
-
+    Mat3 b_first_proj = Mat3().Identity();
     z = bFirst.local_rotations.at(0) * Vec3(0, 0, 1);   // rotation
     z.y() = 0.0f;
     z.normalize();
     x = y.cross(z);
-    b_first_proj.col(0).head<3>() = x;
-    b_first_proj.col(1).head<3>() = y;
-    b_first_proj.col(2).head<3>() = z;
-
+    b_first_proj.col(0) = x;
+    b_first_proj.col(1) = y;
+    b_first_proj.col(2) = z;
 
     // Rotation between the projected roots
-    Mat4 align_transform = a_last_proj * b_first_proj.inverse();
-    Mat3 align_rotation;
-    align_rotation.col(0) = align_transform.col(0).head<3>();     // only consider rotation
-    align_rotation.col(1) = align_transform.col(1).head<3>();
-    align_rotation.col(2) = align_transform.col(2).head<3>();
+    Mat3 align_rotation = a_last_proj * b_first_proj.inverse();
+
 
     // rotate the pose
     for(int i = 0; i < poses_b.size(); i++)
