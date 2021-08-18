@@ -98,7 +98,8 @@ class MyApp : public agl::App
 {
 public:
     agl::spModel            model;
-    agl::spModel            compare_model;
+    agl::spModel            compare_model_a;
+    agl::spModel            compare_model_b;
     agl::Motion             motion_a;
     agl::Motion             motion_b;
     std::vector<agl::Pose>  motion_a_poses;
@@ -109,6 +110,16 @@ public:
     int a_nof;
     int b_nof;
     int stitched_nof;
+
+    // Visualize line from root
+    float line_length = 5.0f;
+    Vec3 line_end = Vec3(0, 0, 1);
+    Vec3 line_start;
+    Mat4 a_line_trf;
+
+    Mat4 b_line_trf;
+
+    
 
     void start() override
     {
@@ -124,12 +135,12 @@ public:
         agl::FBX motion_b_fbx(motion_path_b);
 
         model               = model_fbx.model();
-        compare_model       = model_fbx.model();
+        compare_model_a       = model_fbx.model();
+        compare_model_b       = model_fbx.model();
         motion_a            = motion_a_fbx.motion(model).at(0);
         motion_b            = motion_b_fbx.motion(model).at(0);
         a_nof               = motion_a.poses.size();
         b_nof               = motion_b.poses.size();
-
         cam_offset = 2.0f * Vec3(0.0f, 3.0f, 3.0f);
     
         // stitched = stitch(motion_a.poses, motion_b.poses);
@@ -139,41 +150,70 @@ public:
         stitched_nof = proj_stitched.size();
         
 
+        // Get z axis of root - motion a
+        line_start = proj_stitched.at(a_nof - 1).root_position;
+        line_end = proj_stitched.at(a_nof - 1).local_rotations.at(0) * Vec3(0, 0, 1) + line_start;
+        a_line_trf = draw_line(line_start, line_end);
+        // Translate to see it better
+        Vec3 new_pos = a_line_trf.col(3).head<3>();
+        new_pos.x() -= 1.0f;
+        a_line_trf.col(3).head<3>() = new_pos;
+
+        // Get z axis of root - motion b
+        line_start = proj_stitched.at(a_nof).root_position;
+        line_end = proj_stitched.at(a_nof).local_rotations.at(0) * Vec3(0, 0, 1) + line_start;
+        b_line_trf = draw_line(line_start, line_end);
+
+
     }
 
     bool stop = false;
+    int stop_frame = 60;
     int frame = 0;
     void update() override
     {
         if(stop)
             return;
-
-
-        // // Play single motion A
-        // model->set_pose(motion_a.poses.at(frame));
-        // frame = (frame + 1) % (a_nof);
-
-        // // Play single motion B
-        // model->set_pose(motion_b.poses.at(frame));
-        // frame = (frame + 1) % (b_nof);
-
-        // // Play two motions
-        // if(frame >= 0 && frame < a_nof)
-        //     model->set_pose(motion_a.poses.at(frame));
-        // else if(frame >= a_nof && frame < a_nof + b_nof)
-        //     model->set_pose(motion_b.poses.at(frame-a_nof));
-        // frame = (frame + 1) % (a_nof + b_nof);
         
 
         // Play stitched motion
         model->set_pose(proj_stitched.at(frame));
-        frame = (frame + 1) % stitched_nof;
 
+        // Visualize last frame of motion a
         if(frame >= a_nof - 1)
         {
-            compare_model->set_pose(proj_stitched.at(a_nof-1));
+            agl::Pose compare_pose = proj_stitched.at(a_nof-1);
+            compare_pose.root_position.x() -= 1.0f;
+            compare_model_a->set_pose(compare_pose);
         }
 
+        // Visualize first frame of motion b
+        if(frame >= a_nof)
+        {
+            compare_model_b->set_pose(proj_stitched.at(a_nof));
+        }
+
+        frame = (frame + 1) % stitched_nof;
+
+
+    }
+
+    Mat4 draw_line(Vec3 start_pos, Vec3 end_pos)
+    {
+        Mat4 line_trf = Mat4().Identity();
+        
+        // line_length = sqrt(pow(start_pos.x() - end_pos.x(), 2) + pow(start_pos.y() - end_pos.y(), 2) + pow(start_pos.z() - end_pos.z(), 2));
+        line_trf.col(3).head<3>() = (start_pos + end_pos)/2;
+
+        Vec3 line_z = end_pos - start_pos;
+        line_z.normalize();
+        Vec3 line_y = Vec3(0, 1, 0).cross(line_z);
+        Vec3 line_x = line_y.cross(line_z);
+        line_trf.col(0).head<3>() = line_x;
+        line_trf.col(1).head<3>() = line_y;
+        line_trf.col(2).head<3>() = line_z;
+        
+        return line_trf;
     }
 
     void render() override
@@ -190,24 +230,28 @@ public:
             ->position(0, 0, 0)
             ->draw();
 
-        // agl::Render::cube()
-        //     ->scale(0.3f, 0.3f, 0.5f)
-        //     ->color(0, 1, 0)
-        //     ->transform()
-        //     ->draw();
-
-        // agl::Render::cube()
-        //     ->scale(0.3f, 0.3f, 0.5f)
-        //     ->color(0, 1, 0)
-        //     ->transform()
-        //     ->draw();
-
 
         agl::Render::model(model)->draw();
         if(frame >= a_nof - 1)
         {
-            agl::Render::model(compare_model)->draw();
+            agl::Render::model(compare_model_a)->draw();
+            agl::Render::cube()
+                ->scale(0.05f, 0.05f, 1.0f)
+                ->color(0, 1, 0)
+                ->transform(a_line_trf)
+                ->draw();
         }
+
+        if(frame >= a_nof)
+        {
+            agl::Render::model(compare_model_b)->draw();
+            agl::Render::cube()
+                ->scale(0.05f, 0.05f, 1.0f)
+                ->color(0, 1, 0)
+                ->transform(b_line_trf)
+                ->draw();
+        }
+
         
     }
 
