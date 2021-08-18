@@ -82,28 +82,11 @@ static std::vector<agl::Pose> stitch(
         Vec3 b_i_pos = poses_b.at(i).root_position;
         Vec3 dp = (b_i_pos - b_first_pos);
         
-        // Vec3 new_pos = (b_first_inverse * dp) + a_last_pos;
-        // // Set original y values 
-        // new_pos.y() = b_i_pos.y(); 
-        // new_pose.root_position = new_pos;
-        // new_pose.local_rotations.at(0) = b_first_inverse * new_pose.local_rotations.at(0);
-
-
-        // Only z part
-        Mat3 b_first_orient = poses_b.at(0).local_rotations.at(0).inverse().matrix();
-        Mat3 new_inverse = Mat3().Identity();
-        new_inverse.col(2) = poses_b.at(0).local_rotations.at(0).matrix().col(2);
-        Quat new_inverse_quat = Quat(new_inverse);
-
-        Mat3 a_last_orient_mat = a_last_orient.matrix();
-        Mat3 new_a_orient = Mat3().Identity();
-        new_a_orient.col(2) = a_last_orient_mat.col(2);
-
-        Vec3 new_pos = new_a_orient * (new_inverse_quat * dp) + a_last_pos;
+        Vec3 new_pos = a_last_orient * (b_first_inverse * dp) + a_last_pos;
+        // Set original y values 
         new_pos.y() = b_i_pos.y(); 
         new_pose.root_position = new_pos;
-        new_pose.local_rotations.at(0) = new_a_orient * new_inverse_quat * new_pose.local_rotations.at(0);
-
+        new_pose.local_rotations.at(0) = a_last_orient * b_first_inverse * new_pose.local_rotations.at(0);
 
 
         new_poses.push_back(new_pose);
