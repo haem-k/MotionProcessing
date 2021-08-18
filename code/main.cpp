@@ -98,6 +98,7 @@ class MyApp : public agl::App
 {
 public:
     agl::spModel            model;
+    agl::spModel            compare_model;
     agl::Motion             motion_a;
     agl::Motion             motion_b;
     std::vector<agl::Pose>  motion_a_poses;
@@ -122,11 +123,12 @@ public:
         agl::FBX motion_a_fbx(motion_path_a);
         agl::FBX motion_b_fbx(motion_path_b);
 
-        model       = model_fbx.model();
-        motion_a    = motion_a_fbx.motion(model).at(0);
-        motion_b    = motion_b_fbx.motion(model).at(0);
-        a_nof       = motion_a.poses.size();
-        b_nof       = motion_b.poses.size();
+        model               = model_fbx.model();
+        compare_model       = model_fbx.model();
+        motion_a            = motion_a_fbx.motion(model).at(0);
+        motion_b            = motion_b_fbx.motion(model).at(0);
+        a_nof               = motion_a.poses.size();
+        b_nof               = motion_b.poses.size();
 
         cam_offset = 2.0f * Vec3(0.0f, 3.0f, 3.0f);
     
@@ -167,6 +169,10 @@ public:
         model->set_pose(proj_stitched.at(frame));
         frame = (frame + 1) % stitched_nof;
 
+        if(frame >= a_nof - 1)
+        {
+            compare_model->set_pose(proj_stitched.at(a_nof-1));
+        }
 
     }
 
@@ -184,7 +190,25 @@ public:
             ->position(0, 0, 0)
             ->draw();
 
+        // agl::Render::cube()
+        //     ->scale(0.3f, 0.3f, 0.5f)
+        //     ->color(0, 1, 0)
+        //     ->transform()
+        //     ->draw();
+
+        // agl::Render::cube()
+        //     ->scale(0.3f, 0.3f, 0.5f)
+        //     ->color(0, 1, 0)
+        //     ->transform()
+        //     ->draw();
+
+
         agl::Render::model(model)->draw();
+        if(frame >= a_nof - 1)
+        {
+            agl::Render::model(compare_model)->draw();
+        }
+        
     }
 
     void key_callback(char key, int action) override
