@@ -48,10 +48,10 @@ static std::vector<agl::Pose> stitch_proj(
         Vec3 b_i_pos = poses_b.at(i).root_position;
         Vec3 dp = b_i_pos - b_0_pos;
         
+        // compute rotation
         Vec3 new_root_pos = align_rotation * dp + a_last_pos;
         Mat3 new_root_orient = align_rotation * poses_b.at(i).local_rotations.at(0).matrix();
 
-        // compute rotation
         new_pose.root_position = new_root_pos;
         new_pose.local_rotations.at(0) = Quat(new_root_orient);
         
@@ -153,7 +153,7 @@ public:
         // Get z axis of root - motion a
         line_start = proj_stitched.at(a_nof - 1).root_position;
         line_end = proj_stitched.at(a_nof - 1).local_rotations.at(0) * Vec3(0, 0, 1) + line_start;
-        a_line_trf = draw_line(line_start, line_end);
+        a_line_trf = get_line_transform(line_start, line_end);
         // Translate to see it better
         Vec3 new_pos = a_line_trf.col(3).head<3>();
         new_pos.x() -= 1.0f;
@@ -162,13 +162,12 @@ public:
         // Get z axis of root - motion b
         line_start = proj_stitched.at(a_nof).root_position;
         line_end = proj_stitched.at(a_nof).local_rotations.at(0) * Vec3(0, 0, 1) + line_start;
-        b_line_trf = draw_line(line_start, line_end);
+        b_line_trf = get_line_transform(line_start, line_end);
 
 
     }
 
     bool stop = false;
-    int stop_frame = 60;
     int frame = 0;
     void update() override
     {
@@ -183,6 +182,7 @@ public:
         if(frame >= a_nof - 1)
         {
             agl::Pose compare_pose = proj_stitched.at(a_nof-1);
+            // translate for better visuals
             compare_pose.root_position.x() -= 1.0f;
             compare_model_a->set_pose(compare_pose);
         }
@@ -198,7 +198,7 @@ public:
 
     }
 
-    Mat4 draw_line(Vec3 start_pos, Vec3 end_pos)
+    Mat4 get_line_transform(Vec3 start_pos, Vec3 end_pos)
     {
         Mat4 line_trf = Mat4().Identity();
         
@@ -265,20 +265,6 @@ public:
             this->capture(true);
         if(key == '2')
             this->capture(false);
-    }
-
-    void cam_follow_root(Vec3 root_pos, Vec3 cam_offset)
-    {
-        Vec3 focus = root_pos;
-        focus.y() = 1.0f;
-
-        Vec3 pos = root_pos;
-        pos = pos + cam_offset;
-        pos.y() = 2.0f;
-
-        camera().set_position(pos);
-        camera().set_focus(focus);
-
     }
     
 };
