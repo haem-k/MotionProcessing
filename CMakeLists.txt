@@ -16,13 +16,13 @@ find_package(aOpenGL REQUIRED)
 
 
 # add code
-add_executable(MyApp 
-    ${CMAKE_CURRENT_SOURCE_DIR}/code/main.cpp
+add_executable(Stitching 
+    ${CMAKE_CURRENT_SOURCE_DIR}/code/stitching.cpp
 )
 
 add_executable(Test 
     ${CMAKE_CURRENT_SOURCE_DIR}/code/test.cpp
 )
 
-target_link_libraries(MyApp aOpenGL)
+target_link_libraries(Stitching aOpenGL)
 target_link_libraries(Test aOpenGL)
