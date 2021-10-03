@@ -14,8 +14,15 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(aOpenGL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../aOpenGL)
 find_package(aOpenGL REQUIRED)
 
+# aLibTorch
+set(aLibTorch_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../aLibTorch)
+find_package(aLibTorch REQUIRED)
 
 # add code
+add_executable(template
+    ${CMAKE_CURRENT_SOURCE_DIR}/code/train_template.cpp
+)
+
 add_executable(Stitching 
     ${CMAKE_CURRENT_SOURCE_DIR}/code/stitching.cpp
 )
@@ -28,6 +35,7 @@ add_executable(Test
     ${CMAKE_CURRENT_SOURCE_DIR}/code/test.cpp
 )
 
+target_link_libraries(template aOpenGL aLibTorch)
 target_link_libraries(Stitching aOpenGL)
 target_link_libraries(RootRelative aOpenGL)
 target_link_libraries(Test aOpenGL)
